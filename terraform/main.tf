@@ -31,24 +31,7 @@ resource "aws_security_group" "ecs_sg" {
   }
 }
 
-resource "aws_iam_role" "ecs_task_execution" {
-  name = "ecsTaskExecutionRole"
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [{
-      Action = "sts:AssumeRole",
-      Effect = "Allow",
-      Principal = {
-        Service = "ecs-tasks.amazonaws.com"
-      }
-    }]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "ecs_task_execution_policy" {
-  role       = aws_iam_role.ecs_task_execution.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
-}
+# ❌ Removed IAM role creation block
 
 resource "aws_ecs_cluster" "cluster" {
   name = "medusa-cluster"
@@ -60,7 +43,9 @@ resource "aws_ecs_task_definition" "task" {
   cpu                      = "512"
   memory                   = "1024"
   network_mode             = "awsvpc"
-  execution_role_arn       = aws_iam_role.ecs_task_execution.arn
+
+  # ✅ Use existing role manually
+  execution_role_arn       = "arn:aws:iam::430404604673:role/ecsTaskExecutionRole"
 
   container_definitions = jsonencode([
     {
