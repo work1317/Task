@@ -6,10 +6,27 @@ resource "aws_subnet" "subnet1" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = "10.0.1.0/24"
   availability_zone = "us-east-1a"
+  map_public_ip_on_launch = true  # 🔥 ensures public IPs are auto-assigned
 }
 
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.main.id
+}
+
+# 🔥 NEW: Route table to allow internet access
+resource "aws_route_table" "public_rt" {
+  vpc_id = aws_vpc.main.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.igw.id
+  }
+}
+
+# 🔥 NEW: Associate the route table with the subnet
+resource "aws_route_table_association" "subnet1_assoc" {
+  subnet_id      = aws_subnet.subnet1.id
+  route_table_id = aws_route_table.public_rt.id
 }
 
 resource "aws_security_group" "ecs_sg" {
@@ -31,8 +48,6 @@ resource "aws_security_group" "ecs_sg" {
   }
 }
 
-# ❌ Removed IAM role creation block
-
 resource "aws_ecs_cluster" "cluster" {
   name = "medusa-cluster"
 }
@@ -43,8 +58,6 @@ resource "aws_ecs_task_definition" "task" {
   cpu                      = "512"
   memory                   = "1024"
   network_mode             = "awsvpc"
-
-  # ✅ Use existing role manually
   execution_role_arn       = "arn:aws:iam::430404604673:role/ecsTaskExecutionRole"
 
   container_definitions = jsonencode([
